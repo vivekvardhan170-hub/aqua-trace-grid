@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { MapPin, Activity, Users, TrendingUp, Eye, Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
 
 const projectSites = [
   {
@@ -90,11 +91,10 @@ export const ProjectSites = () => {
   const totalCredits = projectSites.reduce((sum, site) => sum + site.creditsIssued, 0);
   const totalCommunities = projectSites.reduce((sum, site) => sum + site.communities, 0);
 
+  const [showInteractiveMap, setShowInteractiveMap] = useState(false);
+
   const openMapView = (coordinates: string) => {
-    toast({
-      title: "Map View",
-      description: `Opening map view for coordinates: ${coordinates}`,
-    });
+    setShowInteractiveMap(true);
   };
 
   const addNewSite = () => {
@@ -346,6 +346,10 @@ export const ProjectSites = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {showInteractiveMap && (
+        <InteractiveMap onClose={() => setShowInteractiveMap(false)} />
+      )}
     </div>
   );
 };

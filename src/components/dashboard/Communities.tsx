@@ -118,11 +118,20 @@ export const Communities = () => {
     setMessageContent("");
   };
 
-  const contactCommunity = (contact: any) => {
-    toast({
-      title: "Contact Information",
-      description: `Opening contact for ${contact.coordinator}: ${contact.phone}`,
-    });
+  const contactCommunity = (contact: any, type: 'phone' | 'email') => {
+    if (type === 'phone') {
+      window.open(`tel:${contact.phone}`, '_self');
+      toast({
+        title: "Opening Phone App",
+        description: `Calling ${contact.coordinator} at ${contact.phone}`,
+      });
+    } else if (type === 'email') {
+      window.open(`mailto:${contact.email}?subject=Blue Carbon Platform - Communication&body=Dear ${contact.coordinator},%0D%0A%0D%0A`, '_self');
+      toast({
+        title: "Opening Email App",
+        description: `Composing email to ${contact.email}`,
+      });
+    }
   };
 
   return (
@@ -276,7 +285,7 @@ export const Communities = () => {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => contactCommunity(selectedCommunity.contact)}
+                                    onClick={() => contactCommunity(selectedCommunity.contact, 'phone')}
                                   >
                                     <Phone className="h-4 w-4 mr-2" />
                                     Call
@@ -284,7 +293,7 @@ export const Communities = () => {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => contactCommunity(selectedCommunity.contact)}
+                                    onClick={() => contactCommunity(selectedCommunity.contact, 'email')}
                                   >
                                     <Mail className="h-4 w-4 mr-2" />
                                     Email

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useUser } from "@clerk/clerk-react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Overview } from "@/components/dashboard/Overview";
 import { Reports } from "@/components/dashboard/Reports";
@@ -9,9 +10,15 @@ import { Communities } from "@/components/dashboard/Communities";
 import { Analytics } from "@/components/dashboard/Analytics";
 import { Blockchain } from "@/components/dashboard/Blockchain";
 import { Settings } from "@/components/dashboard/Settings";
+import { LoginGateway } from "@/components/auth/LoginGateway";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState("overview");
+  const { isSignedIn } = useUser();
+
+  if (!isSignedIn) {
+    return <LoginGateway />;
+  }
 
   const renderSection = () => {
     switch (activeSection) {

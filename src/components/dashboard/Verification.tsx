@@ -64,8 +64,15 @@ export const Verification = () => {
   const handleVerify = (reportId: string, status: 'approved' | 'rejected') => {
     toast({
       title: `Report ${status}`,
-      description: `Report ${reportId} has been ${status}${status === 'approved' ? ' and carbon credits will be issued' : ''}.`,
+      description: `Report ${reportId} has been ${status}${status === 'approved' ? ' and will be added to reports with carbon credits issued' : ' and rejected with comments'}.`,
     });
+    
+    // Add to reports after verification
+    if (status === 'approved') {
+      // Simulate adding to reports database
+      console.log(`Adding report ${reportId} to reports with ${creditAmount || selectedReport?.estimatedCredits} credits`);
+    }
+    
     setSelectedReport(null);
     setVerificationComment("");
     setCreditAmount("");

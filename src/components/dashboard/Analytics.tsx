@@ -40,9 +40,28 @@ export const Analytics = () => {
   const { toast } = useToast();
 
   const downloadReport = (type: string) => {
+    // Simulate report generation and download
+    const reportData = {
+      type: type,
+      overview: analyticsData.overview,
+      monthly_data: analyticsData.monthly,
+      ecosystems: analyticsData.ecosystems,
+      regions: analyticsData.regions,
+      generated_date: new Date().toISOString()
+    };
+
+    const jsonContent = "data:text/json;charset=utf-8," + JSON.stringify(reportData, null, 2);
+    const encodedUri = encodeURI(jsonContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${type.toLowerCase().replace(/\s+/g, '_')}_report_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
     toast({
-      title: "Report Download",
-      description: `${type} report is being generated and will be downloaded shortly.`,
+      title: "Report Downloaded",
+      description: `${type} report has been downloaded successfully.`,
     });
   };
 

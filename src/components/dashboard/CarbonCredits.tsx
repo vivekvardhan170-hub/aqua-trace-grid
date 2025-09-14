@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Coins, TrendingUp, Award, ExternalLink, Download, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BlockchainExplorer } from "@/components/blockchain/BlockchainExplorer";
 
 const carbonCredits = [
   {
@@ -69,10 +70,33 @@ export const CarbonCredits = () => {
     setSelectedProject("");
   };
 
+  const [showBlockchainExplorer, setShowBlockchainExplorer] = useState(false);
+  const [selectedTxHash, setSelectedTxHash] = useState("");
+
   const viewOnBlockchain = (txHash: string) => {
+    setSelectedTxHash(txHash);
+    setShowBlockchainExplorer(true);
+  };
+
+  const exportCredits = () => {
+    // Simulate CSV export
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      "ID,Token ID,Project,Community,Amount,Issue Date,Status,Price,Total Value\n" +
+      carbonCredits.map(credit => 
+        `${credit.id},${credit.tokenId},${credit.project},${credit.community},${credit.amount},${credit.issueDate},${credit.status},${credit.price},${(credit.amount * credit.price).toFixed(2)}`
+      ).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `carbon_credits_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
     toast({
-      title: "Blockchain Explorer",
-      description: `Opening transaction ${txHash} in blockchain explorer.`,
+      title: "Export Complete",
+      description: "Carbon credits data has been exported to CSV file.",
     });
   };
 
@@ -184,7 +208,7 @@ export const CarbonCredits = () => {
 
         <TabsContent value="active" className="space-y-4">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={exportCredits}>
               <Download className="h-4 w-4 mr-2" />
               Export Credits
             </Button>
@@ -275,6 +299,13 @@ export const CarbonCredits = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {showBlockchainExplorer && (
+        <BlockchainExplorer 
+          onClose={() => setShowBlockchainExplorer(false)}
+          initialTxHash={selectedTxHash}
+        />
+      )}
     </div>
   );
 };
