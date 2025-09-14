@@ -1,0 +1,72 @@
+import {
+  BarChart3,
+  FileText,
+  CheckCircle,
+  Coins,
+  MapPin,
+  Users,
+  TrendingUp,
+  Link,
+  Settings as SettingsIcon,
+  Waves
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface SidebarProps {
+  activeSection: string;
+  onSectionChange: (section: string) => void;
+}
+
+const navigation = [
+  { id: "overview", name: "Overview", icon: BarChart3 },
+  { id: "reports", name: "Reports", icon: FileText },
+  { id: "verification", name: "Verification", icon: CheckCircle },
+  { id: "carbon-credits", name: "Carbon Credits", icon: Coins },
+  { id: "project-sites", name: "Project Sites", icon: MapPin },
+  { id: "communities", name: "Communities", icon: Users },
+  { id: "analytics", name: "Analytics", icon: TrendingUp },
+  { id: "blockchain", name: "Blockchain", icon: Link },
+  { id: "settings", name: "Settings", icon: SettingsIcon },
+];
+
+export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
+  return (
+    <div className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
+      <div className="flex h-full flex-col">
+        <div className="flex items-center gap-2 p-6 border-b border-sidebar-border">
+          <Waves className="h-8 w-8 text-ocean-gradient" />
+          <h1 className="text-xl font-bold text-sidebar-foreground">Blue Carbon</h1>
+        </div>
+        
+        <nav className="flex-1 p-4 space-y-2">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => onSectionChange(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                {item.name}
+              </button>
+            );
+          })}
+        </nav>
+        
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="text-xs text-sidebar-foreground/60">
+            NCCR Admin Dashboard v1.0
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
