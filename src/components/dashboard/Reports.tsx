@@ -201,7 +201,7 @@ export const Reports = () => {
           <DialogHeader>
             <DialogTitle>Submit New Restoration Activity Report</DialogTitle>
           </DialogHeader>
-          <ReportSubmissionForm onSuccess={() => setShowSubmissionForm(false)} />
+          <ReportSubmissionForm />
         </DialogContent>
       </Dialog>
 
