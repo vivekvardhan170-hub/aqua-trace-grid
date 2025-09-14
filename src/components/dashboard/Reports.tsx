@@ -19,9 +19,12 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Leaf
+  Leaf,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import { ReportSubmissionForm } from "@/components/reports/ReportSubmissionForm";
 
 const reports = [
   {
@@ -120,7 +123,9 @@ export const Reports = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [showSubmissionForm, setShowSubmissionForm] = useState(false);
   const { toast } = useToast();
+  const { userRole } = useUserRole();
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,11 +181,29 @@ export const Reports = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">Reports Management</h1>
-        <Button onClick={exportReports} variant="outline" className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Reports
-        </Button>
+        <div className="flex gap-2">
+          {userRole === 'ngo' && (
+            <Button onClick={() => setShowSubmissionForm(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Submit Report
+            </Button>
+          )}
+          <Button onClick={exportReports} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export Reports
+          </Button>
+        </div>
       </div>
+
+      {/* Report Submission Dialog */}
+      <Dialog open={showSubmissionForm} onOpenChange={setShowSubmissionForm}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Submit New Restoration Activity Report</DialogTitle>
+          </DialogHeader>
+          <ReportSubmissionForm onSuccess={() => setShowSubmissionForm(false)} />
+        </DialogContent>
+      </Dialog>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

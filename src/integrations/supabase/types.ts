@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      reports: {
+        Row: {
+          activity_type: string
+          actual_credits: number | null
+          area_covered: number
+          community_name: string
+          created_at: string
+          description: string | null
+          estimated_credits: number
+          gps_data: Json | null
+          id: string
+          location_coordinates: string
+          project_name: string
+          proof_documents: Json | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          verification_date: string | null
+          verification_notes: string | null
+          verifier_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          actual_credits?: number | null
+          area_covered: number
+          community_name: string
+          created_at?: string
+          description?: string | null
+          estimated_credits: number
+          gps_data?: Json | null
+          id?: string
+          location_coordinates: string
+          project_name: string
+          proof_documents?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          verification_date?: string | null
+          verification_notes?: string | null
+          verifier_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          actual_credits?: number | null
+          area_covered?: number
+          community_name?: string
+          created_at?: string
+          description?: string | null
+          estimated_credits?: number
+          gps_data?: Json | null
+          id?: string
+          location_coordinates?: string
+          project_name?: string
+          proof_documents?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          verification_date?: string | null
+          verification_notes?: string | null
+          verifier_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
