@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SignIn, useUser } from "@clerk/clerk-react";
 import { Shield, Users, Building, Waves } from "lucide-react";
+import { useUserRole } from "@/contexts/UserRoleContext";
 
 export const LoginGateway = () => {
   const [selectedRole, setSelectedRole] = useState<'ngo' | 'nccr' | null>(null);
   const { isSignedIn } = useUser();
+  const { setUserRole } = useUserRole();
 
   if (isSignedIn) {
     return null; // User is already authenticated
@@ -28,7 +30,10 @@ export const LoginGateway = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card 
               className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 hover:border-ocean-300"
-              onClick={() => setSelectedRole('ngo')}
+              onClick={() => {
+                setSelectedRole('ngo');
+                setUserRole('ngo');
+              }}
             >
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 p-4 bg-green-100 rounded-full w-fit">
@@ -61,7 +66,10 @@ export const LoginGateway = () => {
 
             <Card 
               className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 border-2 hover:border-ocean-300"
-              onClick={() => setSelectedRole('nccr')}
+              onClick={() => {
+                setSelectedRole('nccr');
+                setUserRole('nccr');
+              }}
             >
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 p-4 bg-blue-100 rounded-full w-fit">

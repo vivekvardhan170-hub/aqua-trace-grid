@@ -13,30 +13,38 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClerk } from "@clerk/clerk-react";
+import { useUserRole } from "@/contexts/UserRoleContext";
 
 interface SidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
 }
 
-const navigation = [
-  { id: "overview", name: "Overview", icon: BarChart3 },
-  { id: "reports", name: "Reports", icon: FileText },
-  { id: "verification", name: "Verification", icon: CheckCircle },
-  { id: "carbon-credits", name: "Carbon Credits", icon: Coins },
-  { id: "project-sites", name: "Project Sites", icon: MapPin },
-  { id: "communities", name: "Communities", icon: Users },
-  { id: "analytics", name: "Analytics", icon: TrendingUp },
-  { id: "blockchain", name: "Blockchain", icon: Link },
-  { id: "settings", name: "Settings", icon: SettingsIcon },
+const allNavigation = [
+  { id: "overview", name: "Overview", icon: BarChart3, roles: ["ngo", "nccr"] },
+  { id: "reports", name: "Reports", icon: FileText, roles: ["ngo", "nccr"] },
+  { id: "verification", name: "Verification", icon: CheckCircle, roles: ["nccr"] },
+  { id: "carbon-credits", name: "Carbon Credits", icon: Coins, roles: ["ngo", "nccr"] },
+  { id: "project-sites", name: "Project Sites", icon: MapPin, roles: ["ngo", "nccr"] },
+  { id: "communities", name: "Communities", icon: Users, roles: ["ngo", "nccr"] },
+  { id: "analytics", name: "Analytics", icon: TrendingUp, roles: ["nccr"] },
+  { id: "blockchain", name: "Blockchain", icon: Link, roles: ["nccr"] },
+  { id: "settings", name: "Settings", icon: SettingsIcon, roles: ["ngo", "nccr"] },
 ];
 
 export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
   const { signOut } = useClerk();
+  const { userRole } = useUserRole();
 
   const handleLogout = () => {
     signOut();
+    localStorage.removeItem('userRole');
   };
+
+  // Filter navigation items based on user role
+  const navigation = allNavigation.filter(item => 
+    userRole && item.roles.includes(userRole)
+  );
   return (
     <div className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-full flex-col">
