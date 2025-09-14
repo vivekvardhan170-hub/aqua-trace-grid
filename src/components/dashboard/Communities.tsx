@@ -115,6 +115,9 @@ export const Communities = () => {
       title: "Message Sent",
       description: `Message sent to ${selectedCommunity?.name} successfully.`,
     });
+    
+    // Add communication record to reports
+    console.log(`Adding communication record for community ${communityId}: ${messageContent}`);
     setMessageContent("");
   };
 

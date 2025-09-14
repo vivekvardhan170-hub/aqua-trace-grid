@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, Eye, MapPin, Calendar, User, Camera } from "lucide-react";
+import { CheckCircle, XCircle, Eye, MapPin, Calendar, User, Camera, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const pendingReports = [
@@ -59,6 +59,7 @@ export const Verification = () => {
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [verificationComment, setVerificationComment] = useState("");
   const [creditAmount, setCreditAmount] = useState("");
+  const [messageToSubmitter, setMessageToSubmitter] = useState("");
   const { toast } = useToast();
 
   const handleVerify = (reportId: string, status: 'approved' | 'rejected') => {
@@ -76,6 +77,18 @@ export const Verification = () => {
     setSelectedReport(null);
     setVerificationComment("");
     setCreditAmount("");
+    setMessageToSubmitter("");
+  };
+
+  const sendMessageToSubmitter = (reportId: string) => {
+    toast({
+      title: "Message Sent",
+      description: `Message sent to report submitter for ${reportId}.`,
+    });
+    
+    // Add communication record to reports
+    console.log(`Adding communication record for report ${reportId}: ${messageToSubmitter}`);
+    setMessageToSubmitter("");
   };
 
   const bulkApprove = () => {
@@ -209,6 +222,25 @@ export const Verification = () => {
                                 value={verificationComment}
                                 onChange={(e) => setVerificationComment(e.target.value)}
                               />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="message-submitter">Send Message to Submitter</Label>
+                              <Textarea
+                                id="message-submitter"
+                                placeholder="Send a message to the report submitter..."
+                                value={messageToSubmitter}
+                                onChange={(e) => setMessageToSubmitter(e.target.value)}
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => sendMessageToSubmitter(selectedReport.id)}
+                                className="w-full mt-2"
+                              >
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Send Message
+                              </Button>
                             </div>
                             
                             <div className="flex gap-2">

@@ -8,9 +8,11 @@ import {
   TrendingUp,
   Link,
   Settings as SettingsIcon,
-  Waves
+  Waves,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useClerk } from "@clerk/clerk-react";
 
 interface SidebarProps {
   activeSection: string;
@@ -30,6 +32,11 @@ const navigation = [
 ];
 
 export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
+  const { signOut } = useClerk();
+
+  const handleLogout = () => {
+    signOut();
+  };
   return (
     <div className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-full flex-col">
@@ -61,7 +68,14 @@ export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
           })}
         </nav>
         
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 text-sidebar-foreground hover:bg-red-500/10 hover:text-red-600"
+          >
+            <LogOut className="h-5 w-5" />
+            Logout
+          </button>
           <div className="text-xs text-sidebar-foreground/60">
             NCCR Admin Dashboard v1.0
           </div>
