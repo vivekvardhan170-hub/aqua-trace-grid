@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SignIn, useAuth } from "@clerk/clerk-react";
+import { SignIn, useUser } from "@clerk/clerk-react";
 import { Shield, Users, Building, Waves } from "lucide-react";
 
 export const LoginGateway = () => {
   const [selectedRole, setSelectedRole] = useState<'ngo' | 'nccr' | null>(null);
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useUser();
 
   if (isSignedIn) {
     return null; // User is already authenticated
@@ -112,9 +112,7 @@ export const LoginGateway = () => {
             <CardContent>
               <div className="space-y-4">
                 <SignIn 
-                  routing="path"
-                  path="/sign-in"
-                  redirectUrl="/"
+                  fallbackRedirectUrl="/"
                   appearance={{
                     elements: {
                       rootBox: "mx-auto",
