@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Overview } from "@/components/dashboard/Overview";
 import { Reports } from "@/components/dashboard/Reports";
 import { Verification } from "@/components/dashboard/Verification";
+import { EnhancedVerification } from "@/components/dashboard/EnhancedVerification";
+import { NGODashboard } from "@/components/dashboard/NGODashboard";
 import { CarbonCredits } from "@/components/dashboard/CarbonCredits";
 import { ProjectSites } from "@/components/dashboard/ProjectSites";
 import { Communities } from "@/components/dashboard/Communities";
@@ -11,23 +13,42 @@ import { Analytics } from "@/components/dashboard/Analytics";
 import { Blockchain } from "@/components/dashboard/Blockchain";
 import { Settings } from "@/components/dashboard/Settings";
 import { LoginGateway } from "@/components/auth/LoginGateway";
+import { useUserRole } from "@/contexts/UserRoleContext";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const { isSignedIn } = useUser();
+  const { userRole } = useUserRole();
 
   if (!isSignedIn) {
     return <LoginGateway />;
   }
 
   const renderSection = () => {
+    // For NGO users, show simplified dashboard
+    if (userRole === 'ngo') {
+      switch (activeSection) {
+        case "overview":
+          return <NGODashboard />;
+        case "reports":
+          return <Reports />;
+        case "carbon-credits":
+          return <CarbonCredits />;
+        case "settings":
+          return <Settings />;
+        default:
+          return <NGODashboard />;
+      }
+    }
+
+    // For NCCR admin users, show full dashboard
     switch (activeSection) {
       case "overview":
         return <Overview />;
       case "reports":
         return <Reports />;
       case "verification":
-        return <Verification />;
+        return <EnhancedVerification />;
       case "carbon-credits":
         return <CarbonCredits />;
       case "project-sites":
