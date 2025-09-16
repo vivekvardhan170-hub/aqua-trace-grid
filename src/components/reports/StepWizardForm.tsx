@@ -81,8 +81,13 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   const locationForm = useForm<LocationData>({
     resolver: zodResolver(locationSchema),
-    defaultValues: { areaCovered: 0, locationCoordinates: "", description: "", gpsData: "" },
-    mode: "onChange",
+    defaultValues: { 
+      areaCovered: 0, 
+      locationCoordinates: "", 
+      description: "", 
+      gpsData: "" 
+    },
+    mode: "onBlur",
   });
 
   const mediaForm = useForm<MediaData>({
@@ -235,6 +240,7 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
               }
             })() : null,
           status: 'Pending',
+          verification_status: 'pending',
         });
 
       if (error) {

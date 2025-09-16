@@ -42,7 +42,6 @@ export const EnhancedVerification = () => {
         const { data, error } = await supabase
           .from('reports')
           .select('*')
-          .eq('status', 'Pending')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -90,7 +89,8 @@ export const EnhancedVerification = () => {
       const { error } = await supabase
         .from('reports')
         .update({
-          status: status === 'approved' ? 'Verified' : 'Rejected',
+          status: status === 'approved' ? 'Approved' : 'Rejected',
+          verification_status: status,
           actual_credits: creditsToIssue,
           verification_notes: verificationComment,
           verification_date: new Date().toISOString(),
@@ -146,20 +146,20 @@ export const EnhancedVerification = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-600">{reports.length}</div>
+            <div className="text-2xl font-bold text-orange-600">{reports.filter(r => r.verification_status === 'pending').length}</div>
             <div className="text-sm text-muted-foreground">Pending Reviews</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">0</div>
-            <div className="text-sm text-muted-foreground">Approved Today</div>
+            <div className="text-2xl font-bold text-green-600">{reports.filter(r => r.verification_status === 'approved').length}</div>
+            <div className="text-sm text-muted-foreground">Approved Reports</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">0</div>
-            <div className="text-sm text-muted-foreground">Rejected Today</div>
+            <div className="text-2xl font-bold text-red-600">{reports.filter(r => r.verification_status === 'rejected').length}</div>
+            <div className="text-sm text-muted-foreground">Rejected Reports</div>
           </CardContent>
         </Card>
       </div>
@@ -173,11 +173,11 @@ export const EnhancedVerification = () => {
         <TabsContent value="pending" className="space-y-4">
           {loading ? (
             <div className="text-center py-8">Loading reports...</div>
-          ) : reports.length === 0 ? (
+          ) : reports.filter(r => r.verification_status === 'pending').length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No pending reports</div>
           ) : (
             <div className="space-y-4">
-              {reports.map((report) => (
+              {reports.filter(r => r.verification_status === 'pending').map((report) => (
                 <Card key={report.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-center justify-between">

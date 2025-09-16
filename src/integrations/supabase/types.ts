@@ -34,6 +34,7 @@ export type Database = {
           user_id: string
           verification_date: string | null
           verification_notes: string | null
+          verification_status: string | null
           verifier_id: string | null
         }
         Insert: {
@@ -55,6 +56,7 @@ export type Database = {
           user_id: string
           verification_date?: string | null
           verification_notes?: string | null
+          verification_status?: string | null
           verifier_id?: string | null
         }
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           user_id?: string
           verification_date?: string | null
           verification_notes?: string | null
+          verification_status?: string | null
           verifier_id?: string | null
         }
         Relationships: []

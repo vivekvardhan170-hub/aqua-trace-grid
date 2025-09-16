@@ -83,28 +83,28 @@ export const NGODashboard = () => {
     };
   }, [user?.id, toast]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Verified":
+  const getStatusIcon = (status: string, verificationStatus?: string) => {
+    const effectiveStatus = verificationStatus || status;
+    switch (effectiveStatus.toLowerCase()) {
+      case "approved":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case "Pending":
-      case "Under Review":
+      case "pending":
         return <Clock className="h-4 w-4 text-orange-600" />;
-      case "Rejected":
+      case "rejected":
         return <XCircle className="h-4 w-4 text-red-600" />;
       default:
         return null;
     }
   };
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "Verified":
+  const getStatusVariant = (status: string, verificationStatus?: string) => {
+    const effectiveStatus = verificationStatus || status;
+    switch (effectiveStatus.toLowerCase()) {
+      case "approved":
         return "default" as const;
-      case "Pending":
-      case "Under Review":
+      case "pending":
         return "secondary" as const;
-      case "Rejected":
+      case "rejected":
         return "destructive" as const;
       default:
         return "outline" as const;
@@ -159,7 +159,7 @@ export const NGODashboard = () => {
               <Coins className="h-8 w-8 text-green-600" />
               <div>
                 <div className="text-2xl font-bold text-foreground">
-                  {reports.filter(r => r.status === 'Verified').reduce((sum, r) => sum + (r.actual_credits || 0), 0)}
+                  {reports.filter(r => r.verification_status === 'approved').reduce((sum, r) => sum + (r.actual_credits || 0), 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">Credits Earned</div>
               </div>
@@ -173,7 +173,7 @@ export const NGODashboard = () => {
               <TrendingUp className="h-8 w-8 text-orange-600" />
               <div>
                 <div className="text-2xl font-bold text-foreground">
-                  {reports.filter(r => r.status === 'Pending').reduce((sum, r) => sum + r.estimated_credits, 0)}
+                  {reports.filter(r => r.verification_status === 'pending').reduce((sum, r) => sum + r.estimated_credits, 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">Pending Credits</div>
               </div>
@@ -217,9 +217,9 @@ export const NGODashboard = () => {
                       <div>
                         <CardTitle className="flex items-center gap-2">
                           {report.title}
-                          <Badge variant={getStatusVariant(report.status)} className="gap-1">
-                            {getStatusIcon(report.status)}
-                            {report.status}
+                          <Badge variant={getStatusVariant(report.status, report.verification_status)} className="gap-1">
+                            {getStatusIcon(report.status, report.verification_status)}
+                            {report.verification_status ? report.verification_status.charAt(0).toUpperCase() + report.verification_status.slice(1) : report.status}
                           </Badge>
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">{report.project_name}</p>
@@ -246,7 +246,7 @@ export const NGODashboard = () => {
                       <div>
                         <span className="text-muted-foreground">Credits:</span>
                         <p className="font-medium">
-                          {report.status === 'Verified' ? report.actual_credits : report.estimated_credits} tonnes
+                          {report.verification_status === 'approved' ? report.actual_credits : report.estimated_credits} tonnes
                         </p>
                       </div>
                       <div>
@@ -255,10 +255,18 @@ export const NGODashboard = () => {
                       </div>
                     </div>
                     
-                    {report.status === "Rejected" && report.verification_notes && (
+                    {report.verification_status === "rejected" && report.verification_notes && (
                       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
                         <p className="text-sm text-red-700">
                           <strong>Rejection Reason:</strong> {report.verification_notes}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {report.verification_status === "approved" && report.verification_notes && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                        <p className="text-sm text-green-700">
+                          <strong>Verification Notes:</strong> {report.verification_notes}
                         </p>
                       </div>
                     )}
