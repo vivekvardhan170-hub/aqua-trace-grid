@@ -217,10 +217,9 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         timestamp: proofFile.timestamp,
       }));
 
-      // Insert report into database
-      const { error } = await supabase
-        .from('reports')
-        .insert({
+      // Insert report via secure Edge Function (bypasses RLS with service role)
+      const { data, error } = await supabase.functions.invoke('submit-report', {
+        body: {
           user_id: user.id,
           title: projectData.title,
           project_name: projectData.projectName,
@@ -231,17 +230,17 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           estimated_credits: mediaData.estimatedCredits,
           description: locationData.description,
           proof_documents: proofDocuments,
-          gps_data: locationData.gpsData && locationData.gpsData.trim() ? 
-            (() => {
-              try {
-                return JSON.parse(locationData.gpsData);
-              } catch (e) {
-                return { raw: locationData.gpsData };
-              }
-            })() : null,
+          gps_data: locationData.gpsData && locationData.gpsData.trim()
+            ? (() => { try { return JSON.parse(locationData.gpsData); } catch { return { raw: locationData.gpsData }; } })()
+            : null,
           status: 'Pending',
           verification_status: 'pending',
-        });
+        },
+      });
+
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : (error as any)?.message ?? 'Failed to submit');
+      }
 
       if (error) {
         throw new Error(error.message);

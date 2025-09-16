@@ -25,7 +25,7 @@ const allNavigation = [
   { id: "reports", name: "Reports", icon: FileText, roles: ["ngo", "nccr"] },
   { id: "verification", name: "Verification", icon: CheckCircle, roles: ["nccr"] },
   { id: "carbon-credits", name: "Carbon Credits", icon: Coins, roles: ["ngo", "nccr"] },
-  { id: "project-sites", name: "Project Sites", icon: MapPin, roles: ["ngo", "nccr"] },
+  { id: "project-sites", name: "Project Sites", icon: MapPin, roles: ["nccr"] },
   { id: "communities", name: "Communities", icon: Users, roles: ["ngo", "nccr"] },
   { id: "analytics", name: "Analytics", icon: TrendingUp, roles: ["nccr"] },
   { id: "blockchain", name: "Blockchain", icon: Link, roles: ["nccr"] },

@@ -211,7 +211,7 @@ export const NGODashboard = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {reports.map((report) => (
+              {reports.slice(0, 2).map((report) => (
                 <Card key={report.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-center justify-between">

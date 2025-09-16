@@ -218,7 +218,7 @@ export const CarbonCredits = () => {
             </Button>
           </div>
           
-          {carbonCredits.map((credit) => (
+          {carbonCredits.slice(0, 2).map((credit) => (
             <Card key={credit.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
