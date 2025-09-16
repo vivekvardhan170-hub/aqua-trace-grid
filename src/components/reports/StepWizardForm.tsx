@@ -36,7 +36,7 @@ const projectInfoSchema = z.object({
 });
 
 const locationSchema = z.object({
-  areaCovered: z.number().min(0.1, "Area must be greater than 0"),
+  areaCovered: z.coerce.number().min(0.1, "Area must be greater than 0"),
   locationCoordinates: z.string().min(1, "Location coordinates are required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   gpsData: z.string().optional(),
@@ -82,6 +82,7 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const locationForm = useForm<LocationData>({
     resolver: zodResolver(locationSchema),
     defaultValues: { areaCovered: 0, locationCoordinates: "", description: "", gpsData: "" },
+    mode: "onChange",
   });
 
   const mediaForm = useForm<MediaData>({
@@ -382,8 +383,14 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                     <FormItem>
                       <FormLabel>GPS Coordinates</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., 22.1696°N, 88.8817°E" {...field} />
+                        <Input 
+                          placeholder="e.g., 22.1696°N, 88.8817°E or 22.1696, 88.8817" 
+                          {...field} 
+                        />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Enter coordinates in decimal degrees or degrees format
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -398,12 +405,20 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                       <FormControl>
                         <Input 
                           type="number" 
-                          step="0.1" 
-                          placeholder="Enter area in hectares" 
-                          {...field}
-                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                          step="0.1"
+                          min="0"
+                          placeholder="e.g., 2.5" 
+                          value={field.value || ""}
+                          onChange={e => {
+                            const value = e.target.value;
+                            field.onChange(value === "" ? 0 : parseFloat(value));
+                          }}
+                          onBlur={field.onBlur}
                         />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Enter the total area of restoration work in hectares
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
