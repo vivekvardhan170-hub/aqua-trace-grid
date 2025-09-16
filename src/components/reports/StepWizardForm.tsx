@@ -82,7 +82,7 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const locationForm = useForm<LocationData>({
     resolver: zodResolver(locationSchema),
     defaultValues: { 
-      areaCovered: 0, 
+      areaCovered: undefined, 
       locationCoordinates: "", 
       description: "", 
       gpsData: "" 
@@ -355,11 +355,8 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Mangrove Plantation">Mangrove Plantation</SelectItem>
-                          <SelectItem value="Seagrass Restoration">Seagrass Restoration</SelectItem>
-                          <SelectItem value="Salt Marsh Restoration">Salt Marsh Restoration</SelectItem>
-                          <SelectItem value="Wetland Monitoring">Wetland Monitoring</SelectItem>
+                          <SelectItem value="Wetland Restoration">Wetland Restoration</SelectItem>
                           <SelectItem value="Community Training">Community Training</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -412,14 +409,15 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                         <Input 
                           type="number" 
                           step="0.1"
-                          min="0"
+                          min="0.1"
                           placeholder="e.g., 2.5" 
                           value={field.value || ""}
                           onChange={e => {
                             const value = e.target.value;
-                            field.onChange(value === "" ? 0 : parseFloat(value));
+                            field.onChange(value === "" ? undefined : parseFloat(value));
                           }}
                           onBlur={field.onBlur}
+                          name={field.name}
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
