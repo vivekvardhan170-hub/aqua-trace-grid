@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { 
   CheckCircle, 
@@ -18,181 +17,114 @@ import {
   User, 
   Camera, 
   MessageCircle,
-  Download,
   FileText,
-  AlertTriangle,
   Clock,
   Satellite,
   Coins,
-  Send,
-  Filter,
-  TrendingUp
+  Send
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const pendingReports = [
-  {
-    id: "BCR-2024-001",
-    title: "Sundarbans Mangrove Restoration Phase 2",
-    project: "Sundarbans Mangrove Restoration",
-    community: "Gosaba Village Committee",
-    submitted: "2024-01-15",
-    submitter: "Ravi Kumar",
-    submitterEmail: "ravi@gosaba.org",
-    area: "2.5 hectares",
-    activity: "Mangrove Plantation",
-    description: "Restoration of degraded mangrove areas in the Sundarbans delta. Activities include seedling plantation, community training, and monitoring protocols setup.",
-    gps: "22.1696°N, 88.8817°E",
-    photos: 12,
-    droneData: "Available",
-    estimatedCredits: 150,
-    priority: "high",
-    riskLevel: "low",
-    proofDocuments: [
-      { name: "plantation_photos.zip", type: "photo", size: "45.2 MB", geotagged: true },
-      { name: "gps_tracking.gpx", type: "gps", size: "2.1 MB", geotagged: false },
-      { name: "drone_survey.pdf", type: "drone", size: "15.8 MB", geotagged: true }
-    ],
-    verificationChecklist: {
-      documentationComplete: false,
-      locationVerified: false,
-      areaCalculated: false,
-      photoAuthenticity: false,
-      communityValidation: false
-    }
-  },
-  {
-    id: "BCR-2024-002", 
-    title: "Chilika Lake Seagrass Conservation Expansion",
-    project: "Chilika Lake Seagrass Conservation",
-    community: "Balugaon Fishermen Association",
-    submitted: "2024-01-16",
-    submitter: "Priya Patel",
-    submitterEmail: "priya@balugaon.org",
-    area: "1.8 hectares",
-    activity: "Seagrass Restoration",
-    description: "Expansion of seagrass beds in Chilika Lake through transplantation and protection measures. Includes fishermen community engagement and sustainable practices training.",
-    gps: "19.7179°N, 85.4456°E",
-    photos: 8,
-    droneData: "Pending",
-    estimatedCredits: 120,
-    priority: "medium",
-    riskLevel: "medium",
-    proofDocuments: [
-      { name: "seagrass_photos.zip", type: "photo", size: "28.4 MB", geotagged: true },
-      { name: "water_quality_data.xlsx", type: "other", size: "1.2 MB", geotagged: false }
-    ],
-    verificationChecklist: {
-      documentationComplete: true,
-      locationVerified: true,
-      areaCalculated: false,
-      photoAuthenticity: false,
-      communityValidation: false
-    }
-  },
-  {
-    id: "BCR-2024-003",
-    title: "Pulicat Lagoon Salt Marsh Recovery Initiative",
-    project: "Pulicat Lagoon Salt Marsh Recovery",
-    community: "Sullurpeta Coastal Group",
-    submitted: "2024-01-17",
-    submitter: "Anjali Singh",
-    submitterEmail: "anjali@sullurpeta.org",
-    area: "3.2 hectares",
-    activity: "Salt Marsh Restoration",
-    description: "Comprehensive salt marsh ecosystem restoration including native plant species reintroduction, soil improvement, and habitat creation for coastal wildlife.",
-    gps: "13.6288°N, 80.3492°E",
-    photos: 15,
-    droneData: "Available",
-    estimatedCredits: 200,
-    priority: "high",
-    riskLevel: "low",
-    proofDocuments: [
-      { name: "marsh_restoration_photos.zip", type: "photo", size: "67.9 MB", geotagged: true },
-      { name: "soil_analysis_report.pdf", type: "other", size: "8.4 MB", geotagged: false },
-      { name: "drone_mapping_data.zip", type: "drone", size: "234.7 MB", geotagged: true },
-      { name: "species_inventory.xlsx", type: "other", size: "3.1 MB", geotagged: false }
-    ],
-    verificationChecklist: {
-      documentationComplete: true,
-      locationVerified: true,
-      areaCalculated: true,
-      photoAuthenticity: true,
-      communityValidation: false
-    }
-  }
-];
+import { supabase } from "@/integrations/supabase/client";
 
 export const EnhancedVerification = () => {
+  const [reports, setReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [verificationComment, setVerificationComment] = useState("");
   const [creditAmount, setCreditAmount] = useState("");
   const [messageToSubmitter, setMessageToSubmitter] = useState("");
-  const [filterPriority, setFilterPriority] = useState("all");
-  const [filterRisk, setFilterRisk] = useState("all");
-  const [checklist, setChecklist] = useState<any>({});
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const filteredReports = pendingReports.filter(report => {
-    const matchesPriority = filterPriority === "all" || report.priority === filterPriority;
-    const matchesRisk = filterRisk === "all" || report.riskLevel === filterRisk;
-    return matchesPriority && matchesRisk;
-  });
+  // Load reports from database with real-time updates
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('reports')
+          .select('*')
+          .eq('status', 'Pending')
+          .order('created_at', { ascending: false });
 
-  const handleVerify = (reportId: string, status: 'approved' | 'rejected') => {
-    const selectedReport = pendingReports.find(r => r.id === reportId);
-    const creditsToIssue = status === 'approved' ? (creditAmount || selectedReport?.estimatedCredits) : 0;
-    
-    toast({
-      title: `Report ${status}`,
-      description: `Report ${reportId} has been ${status}${status === 'approved' ? ` and ${creditsToIssue} carbon credits will be issued` : ' with comments provided'}.`,
-    });
-    
-    if (status === 'approved') {
-      console.log(`Issuing ${creditsToIssue} credits for report ${reportId}`);
+        if (error) throw error;
+        setReports(data || []);
+      } catch (error) {
+        console.error('Error loading reports:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load reports. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReports();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('reports-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reports'
+        },
+        (payload) => {
+          console.log('Real-time update:', payload);
+          loadReports(); // Reload reports when changes occur
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
+
+  const handleVerify = async (reportId: string, status: 'approved' | 'rejected') => {
+    try {
+      const creditsToIssue = status === 'approved' ? (parseInt(creditAmount) || selectedReport?.estimated_credits) : null;
+      
+      const { error } = await supabase
+        .from('reports')
+        .update({
+          status: status === 'approved' ? 'Verified' : 'Rejected',
+          actual_credits: creditsToIssue,
+          verification_notes: verificationComment,
+          verification_date: new Date().toISOString(),
+        })
+        .eq('id', reportId);
+
+      if (error) throw error;
+      
+      toast({
+        title: `Report ${status}`,
+        description: `Report has been ${status}${status === 'approved' ? ` and ${creditsToIssue} carbon credits will be issued` : ' with comments provided'}.`,
+      });
+      
+      setSelectedReport(null);
+      setVerificationComment("");
+      setCreditAmount("");
+      setMessageToSubmitter("");
+      
+    } catch (error) {
+      console.error('Error updating report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update report. Please try again.",
+        variant: "destructive",
+      });
     }
-    
-    setSelectedReport(null);
-    setVerificationComment("");
-    setCreditAmount("");
-    setMessageToSubmitter("");
-    setChecklist({});
   };
 
   const sendMessageToSubmitter = (reportId: string) => {
     toast({
       title: "Message Sent",
-      description: `Message sent to report submitter for ${reportId}.`,
+      description: `Message sent to report submitter.`,
     });
-    
-    console.log(`Sending message to submitter for report ${reportId}: ${messageToSubmitter}`);
     setMessageToSubmitter("");
-  };
-
-  const bulkApprove = () => {
-    toast({
-      title: "Bulk Approval",
-      description: `${filteredReports.length} reports have been approved for carbon credit issuance.`,
-    });
-  };
-
-  const handleChecklistChange = (key: string, value: boolean) => {
-    setChecklist((prev: any) => ({ ...prev, [key]: value }));
-  };
-
-  const getCompletionPercentage = (report: any) => {
-    const checklistItems = Object.values(report.verificationChecklist);
-    const completed = checklistItems.filter(Boolean).length;
-    return Math.round((completed / checklistItems.length) * 100);
-  };
-
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'low': return 'text-green-600';
-      case 'medium': return 'text-orange-600';
-      case 'high': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
   };
 
   const getFileIcon = (type: string) => {
@@ -208,44 +140,26 @@ export const EnhancedVerification = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">NCCR Verification Center</h1>
-        <div className="flex gap-2">
-          <Button onClick={bulkApprove} variant="ocean" className="gap-2">
-            <CheckCircle className="h-4 w-4" />
-            Bulk Approve Selected
-          </Button>
-        </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-600">{pendingReports.length}</div>
+            <div className="text-2xl font-bold text-orange-600">{reports.length}</div>
             <div className="text-sm text-muted-foreground">Pending Reviews</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">15</div>
+            <div className="text-2xl font-bold text-green-600">0</div>
             <div className="text-sm text-muted-foreground">Approved Today</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">2</div>
+            <div className="text-2xl font-bold text-red-600">0</div>
             <div className="text-sm text-muted-foreground">Rejected Today</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">470</div>
-            <div className="text-sm text-muted-foreground">Credits to Issue</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-purple-600">8.5h</div>
-            <div className="text-sm text-muted-foreground">Avg Review Time</div>
           </CardContent>
         </Card>
       </div>
@@ -254,80 +168,49 @@ export const EnhancedVerification = () => {
         <TabsList>
           <TabsTrigger value="pending">Pending Verification</TabsTrigger>
           <TabsTrigger value="history">Verification History</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4">
-          {/* Filters */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">Filters:</span>
-            </div>
-            <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterRisk} onValueChange={setFilterRisk}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Risk Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Risk</SelectItem>
-                <SelectItem value="low">Low Risk</SelectItem>
-                <SelectItem value="medium">Medium Risk</SelectItem>
-                <SelectItem value="high">High Risk</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Reports List */}
-          <div className="space-y-4">
-            {filteredReports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2 mb-2">
-                        {report.id} - {report.title}
-                        <Badge variant={report.priority === 'high' ? 'destructive' : report.priority === 'medium' ? 'secondary' : 'outline'}>
-                          {report.priority} priority
-                        </Badge>
-                        <Badge variant="outline" className={getRiskColor(report.riskLevel)}>
-                          {report.riskLevel} risk
-                        </Badge>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">{report.project}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>Submitted: {report.submitted}</span>
-                        <span>•</span>
-                        <span>By: {report.submitter}</span>
-                        <span>•</span>
-                        <span>Completion: {getCompletionPercentage(report)}%</span>
+          {loading ? (
+            <div className="text-center py-8">Loading reports...</div>
+          ) : reports.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No pending reports</div>
+          ) : (
+            <div className="space-y-4">
+              {reports.map((report) => (
+                <Card key={report.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="flex items-center gap-2 mb-2">
+                          {report.title}
+                          <Badge variant="secondary">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {report.status}
+                          </Badge>
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">{report.project_name}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <span>Submitted: {new Date(report.created_at).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span>Community: {report.community_name}</span>
+                          <span>•</span>
+                          <span>Credits: {report.estimated_credits}</span>
+                        </div>
                       </div>
-                    </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Review Report
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Detailed Verification - {report.id}</DialogTitle>
-                        </DialogHeader>
-                        {selectedReport && (
-                          <div className="grid grid-cols-3 gap-6">
-                            {/* Left Column - Report Details */}
-                            <div className="col-span-2 space-y-6">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Review Report
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Verify Report - {report.title}</DialogTitle>
+                          </DialogHeader>
+                          {selectedReport && (
+                            <div className="space-y-6">
                               <Card>
                                 <CardHeader>
                                   <CardTitle className="text-lg">Project Information</CardTitle>
@@ -340,23 +223,23 @@ export const EnhancedVerification = () => {
                                     </div>
                                     <div>
                                       <span className="font-medium">Project:</span>
-                                      <p>{selectedReport.project}</p>
+                                      <p>{selectedReport.project_name}</p>
                                     </div>
                                     <div>
                                       <span className="font-medium">Community:</span>
-                                      <p>{selectedReport.community}</p>
+                                      <p>{selectedReport.community_name}</p>
                                     </div>
                                     <div>
                                       <span className="font-medium">Activity:</span>
-                                      <p>{selectedReport.activity}</p>
+                                      <p>{selectedReport.activity_type}</p>
                                     </div>
                                     <div>
                                       <span className="font-medium">Area:</span>
-                                      <p>{selectedReport.area}</p>
+                                      <p>{selectedReport.area_covered} hectares</p>
                                     </div>
                                     <div>
                                       <span className="font-medium">Est. Credits:</span>
-                                      <p>{selectedReport.estimatedCredits} tonnes CO₂</p>
+                                      <p>{selectedReport.estimated_credits} tonnes CO₂</p>
                                     </div>
                                   </div>
                                   <Separator />
@@ -364,29 +247,9 @@ export const EnhancedVerification = () => {
                                     <span className="font-medium">Description:</span>
                                     <p className="text-sm mt-1">{selectedReport.description}</p>
                                   </div>
-                                </CardContent>
-                              </Card>
-
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-lg">Submitter Information</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    <span>{selectedReport.submitter}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <MessageCircle className="h-4 w-4" />
-                                    <span>{selectedReport.submitterEmail}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>Submitted: {selectedReport.submitted}</span>
-                                  </div>
                                   <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4" />
-                                    <span>{selectedReport.gps}</span>
+                                    <span>{selectedReport.location_coordinates}</span>
                                   </div>
                                 </CardContent>
                               </Card>
@@ -396,187 +259,123 @@ export const EnhancedVerification = () => {
                                   <CardTitle className="text-lg">Proof Documents</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                  <div className="space-y-3">
-                                    {selectedReport.proofDocuments.map((doc: any, index: number) => (
-                                      <div key={index} className="flex items-center justify-between p-3 border rounded-md">
-                                        <div className="flex items-center gap-3">
-                                          {getFileIcon(doc.type)}
-                                          <div>
-                                            <p className="font-medium">{doc.name}</p>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                              <span>{doc.size}</span>
-                                              {doc.geotagged && (
-                                                <Badge variant="secondary" className="text-xs">Geotagged</Badge>
-                                              )}
+                                  {selectedReport.proof_documents && selectedReport.proof_documents.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {selectedReport.proof_documents.map((doc: any, index: number) => (
+                                        <div key={index} className="flex items-center justify-between p-3 border rounded-md">
+                                          <div className="flex items-center gap-3">
+                                            {getFileIcon(doc.fileType)}
+                                            <div>
+                                              <p className="font-medium">{doc.fileName}</p>
+                                              <p className="text-xs text-muted-foreground">
+                                                {Math.round(doc.fileSize / 1024 / 1024 * 100) / 100} MB • {doc.geotagged ? 'Geotagged' : 'No GPS data'}
+                                              </p>
                                             </div>
                                           </div>
                                         </div>
-                                        <Button variant="ghost" size="sm">
-                                          <Download className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-muted-foreground">No documents uploaded</p>
+                                  )}
                                 </CardContent>
                               </Card>
-                            </div>
 
-                            {/* Right Column - Verification Actions */}
-                            <div className="space-y-6">
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-lg">Verification Checklist</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                  {Object.entries(selectedReport.verificationChecklist).map(([key, value]) => (
-                                    <div key={key} className="flex items-center justify-between">
-                                      <span className="text-sm">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
-                                      <input
-                                        type="checkbox"
-                                        checked={checklist[key] !== undefined ? checklist[key] : value}
-                                        onChange={(e) => handleChecklistChange(key, e.target.checked)}
-                                        className="rounded"
+                              <div className="grid grid-cols-2 gap-4">
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg">Verification Decision</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="credits">Carbon Credits to Issue</Label>
+                                      <Input
+                                        id="credits"
+                                        type="number"
+                                        placeholder={`Default: ${selectedReport.estimated_credits}`}
+                                        value={creditAmount}
+                                        onChange={(e) => setCreditAmount(e.target.value)}
                                       />
                                     </div>
-                                  ))}
-                                </CardContent>
-                              </Card>
 
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-lg">Credit Assessment</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="credits">Carbon Credits to Issue</Label>
-                                    <Input
-                                      id="credits"
-                                      type="number"
-                                      placeholder={selectedReport.estimatedCredits.toString()}
-                                      value={creditAmount}
-                                      onChange={(e) => setCreditAmount(e.target.value)}
-                                    />
-                                  </div>
-                                  
-                                  <div>
-                                    <Label htmlFor="comment">Verification Notes</Label>
-                                    <Textarea
-                                      id="comment"
-                                      placeholder="Add detailed verification notes and observations..."
-                                      value={verificationComment}
-                                      onChange={(e) => setVerificationComment(e.target.value)}
-                                      className="min-h-[100px]"
-                                    />
-                                  </div>
-                                </CardContent>
-                              </Card>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="comments">Verification Comments</Label>
+                                      <Textarea
+                                        id="comments"
+                                        placeholder="Add verification notes..."
+                                        value={verificationComment}
+                                        onChange={(e) => setVerificationComment(e.target.value)}
+                                        className="min-h-[100px]"
+                                      />
+                                    </div>
 
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-lg">Communication</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="message-submitter">Message to Submitter</Label>
-                                    <Textarea
-                                      id="message-submitter"
-                                      placeholder="Send clarification requests or feedback to the submitter..."
-                                      value={messageToSubmitter}
-                                      onChange={(e) => setMessageToSubmitter(e.target.value)}
-                                    />
-                                  </div>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => sendMessageToSubmitter(selectedReport.id)}
-                                    className="w-full gap-2"
-                                  >
-                                    <Send className="h-4 w-4" />
-                                    Send Message
-                                  </Button>
-                                </CardContent>
-                              </Card>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Button 
+                                        onClick={() => handleVerify(selectedReport.id, 'approved')}
+                                        className="gap-2"
+                                        variant="default"
+                                      >
+                                        <CheckCircle className="h-4 w-4" />
+                                        Accept
+                                      </Button>
+                                      <Button 
+                                        onClick={() => handleVerify(selectedReport.id, 'rejected')}
+                                        variant="destructive"
+                                        className="gap-2"
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
 
-                              <div className="flex flex-col gap-2">
-                                <Button 
-                                  variant="ocean" 
-                                  onClick={() => handleVerify(selectedReport.id, 'approved')}
-                                  className="gap-2"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                  Approve & Issue Credits
-                                </Button>
-                                <Button 
-                                  variant="destructive" 
-                                  onClick={() => handleVerify(selectedReport.id, 'rejected')}
-                                  className="gap-2"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Reject Report
-                                </Button>
+                                <Card>
+                                  <CardHeader>
+                                    <CardTitle className="text-lg">Message NGO</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="message">Send message</Label>
+                                      <Textarea
+                                        id="message"
+                                        placeholder="Ask questions or request additional documentation..."
+                                        value={messageToSubmitter}
+                                        onChange={(e) => setMessageToSubmitter(e.target.value)}
+                                        className="min-h-[100px]"
+                                      />
+                                    </div>
+                                    <Button 
+                                      onClick={() => sendMessageToSubmitter(selectedReport.id)}
+                                      variant="outline"
+                                      className="w-full gap-2"
+                                      disabled={!messageToSubmitter.trim()}
+                                    >
+                                      <Send className="h-4 w-4" />
+                                      Send Message
+                                    </Button>
+                                  </CardContent>
+                                </Card>
                               </div>
                             </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Community:</span>
-                      <p className="font-medium">{report.community}</p>
+                          )}
+                        </DialogContent>
+                      </Dialog>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Activity:</span>
-                      <p className="font-medium">{report.activity}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Area:</span>
-                      <p className="font-medium">{report.area}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Est. Credits:</span>
-                      <p className="font-medium">{report.estimatedCredits} tonnes</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Documents:</span>
-                      <p className="font-medium">{report.proofDocuments.length} files</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Verification History</CardTitle>
+              <CardTitle>Verification History</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="h-16 w-16 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Verification History</h3>
-                <p>Completed verifications will appear here with detailed audit trails.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Verification Analytics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <TrendingUp className="h-16 w-16 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Analytics Dashboard</h3>
-                <p>Verification metrics, trends, and performance data coming soon.</p>
-              </div>
+              <p className="text-muted-foreground">Verification history will be displayed here.</p>
             </CardContent>
           </Card>
         </TabsContent>
