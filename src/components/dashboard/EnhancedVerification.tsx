@@ -177,7 +177,7 @@ export const EnhancedVerification = () => {
             <div className="text-center py-8 text-muted-foreground">No pending reports</div>
           ) : (
             <div className="space-y-4">
-              {reports.filter(r => r.verification_status === 'pending').map((report) => (
+              {reports.filter(r => r.verification_status === 'pending').slice(0, 2).map((report) => (
                 <Card key={report.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -192,8 +192,6 @@ export const EnhancedVerification = () => {
                         <p className="text-sm text-muted-foreground">{report.project_name}</p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <span>Submitted: {new Date(report.created_at).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>Community: {report.community_name}</span>
                           <span>•</span>
                           <span>Credits: {report.estimated_credits}</span>
                         </div>

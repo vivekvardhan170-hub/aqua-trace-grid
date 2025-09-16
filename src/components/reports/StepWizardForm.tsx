@@ -353,11 +353,10 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                             <SelectValue placeholder="Select the type of restoration activity" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Mangrove Plantation">Mangrove Plantation</SelectItem>
-                          <SelectItem value="Wetland Restoration">Wetland Restoration</SelectItem>
-                          <SelectItem value="Community Training">Community Training</SelectItem>
-                        </SelectContent>
+        <SelectContent>
+          <SelectItem value="Mangrove Plantation">Mangrove Plantation</SelectItem>
+          <SelectItem value="Wetland Restoration">Wetland Restoration</SelectItem>
+        </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StepWizardForm } from "@/components/reports/StepWizardForm";
+import { CommunityChat } from "@/components/chat/CommunityChat";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@clerk/clerk-react";
 
@@ -196,7 +197,7 @@ export const NGODashboard = () => {
         <TabsList>
           <TabsTrigger value="reports">My Reports</TabsTrigger>
           <TabsTrigger value="wallet">Credit Wallet</TabsTrigger>
-          <TabsTrigger value="progress">Progress Tracking</TabsTrigger>
+          <TabsTrigger value="chat">Community Chat</TabsTrigger>
           <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
         </TabsList>
 
@@ -284,11 +285,9 @@ export const NGODashboard = () => {
           </div>
         </TabsContent>
 
-        {/* Progress Tracking Tab */}
-        <TabsContent value="progress" className="space-y-4">
-          <div className="text-center py-8 text-muted-foreground">
-            Progress tracking coming soon.
-          </div>
+        {/* Community Chat Tab */}
+        <TabsContent value="chat" className="space-y-4">
+          <CommunityChat />
         </TabsContent>
 
         {/* Marketplace Tab */}
