@@ -368,14 +368,159 @@ export const EnhancedVerification = () => {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Verification History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Verification history will be displayed here.</p>
-            </CardContent>
-          </Card>
+          {loading ? (
+            <div className="text-center py-8">Loading verification history...</div>
+          ) : reports.filter(r => r.verification_status !== 'pending').length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No verified reports yet</div>
+          ) : (
+            <div className="space-y-4">
+              {reports.filter(r => r.verification_status !== 'pending').slice(0, 2).map((report) => (
+                <Card key={report.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="flex items-center gap-2 mb-2">
+                          {report.title}
+                          <Badge variant={report.verification_status === 'approved' ? 'default' : 'destructive'}>
+                            {report.verification_status === 'approved' ? (
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                            ) : (
+                              <XCircle className="h-3 w-3 mr-1" />
+                            )}
+                            {report.verification_status === 'approved' ? 'Accepted' : 'Rejected'}
+                          </Badge>
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">{report.project_name}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <span>Submitted: {new Date(report.created_at).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span>Verified: {new Date(report.verification_date).toLocaleDateString()}</span>
+                          {report.verification_status === 'approved' && (
+                            <>
+                              <span>•</span>
+                              <span className="text-green-600">Credits: {report.actual_credits || report.estimated_credits}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Report Details - {report.title}</DialogTitle>
+                          </DialogHeader>
+                          {selectedReport && (
+                            <div className="space-y-6">
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-lg flex items-center gap-2">
+                                    Project Information
+                                    <Badge variant={selectedReport.verification_status === 'approved' ? 'default' : 'destructive'}>
+                                      {selectedReport.verification_status === 'approved' ? (
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                      ) : (
+                                        <XCircle className="h-3 w-3 mr-1" />
+                                      )}
+                                      {selectedReport.verification_status === 'approved' ? 'Accepted' : 'Rejected'}
+                                    </Badge>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <span className="font-medium">Title:</span>
+                                      <p>{selectedReport.title}</p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">Project:</span>
+                                      <p>{selectedReport.project_name}</p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">Community:</span>
+                                      <p>{selectedReport.community_name}</p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">Activity:</span>
+                                      <p>{selectedReport.activity_type}</p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">Area:</span>
+                                      <p>{selectedReport.area_covered} hectares</p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">
+                                        {selectedReport.verification_status === 'approved' ? 'Credits Issued:' : 'Est. Credits:'}
+                                      </span>
+                                      <p className={selectedReport.verification_status === 'approved' ? 'text-green-600 font-semibold' : ''}>
+                                        {selectedReport.verification_status === 'approved' 
+                                          ? (selectedReport.actual_credits || selectedReport.estimated_credits)
+                                          : selectedReport.estimated_credits
+                                        } tonnes CO₂
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Separator />
+                                  <div>
+                                    <span className="font-medium">Description:</span>
+                                    <p className="text-sm mt-1">{selectedReport.description}</p>
+                                  </div>
+                                  {selectedReport.verification_notes && (
+                                    <>
+                                      <Separator />
+                                      <div>
+                                        <span className="font-medium">Verification Notes:</span>
+                                        <p className="text-sm mt-1 p-3 bg-muted rounded-md">{selectedReport.verification_notes}</p>
+                                      </div>
+                                    </>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4" />
+                                    <span>{selectedReport.location_coordinates}</span>
+                                  </div>
+                                </CardContent>
+                              </Card>
+
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-lg">Proof Documents</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  {selectedReport.proof_documents && selectedReport.proof_documents.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {selectedReport.proof_documents.map((doc: any, index: number) => (
+                                        <div key={index} className="flex items-center justify-between p-3 border rounded-md">
+                                          <div className="flex items-center gap-3">
+                                            {getFileIcon(doc.fileType)}
+                                            <div>
+                                              <p className="font-medium">{doc.fileName}</p>
+                                              <p className="text-xs text-muted-foreground">
+                                                {Math.round(doc.fileSize / 1024 / 1024 * 100) / 100} MB • {doc.geotagged ? 'Geotagged' : 'No GPS data'}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-muted-foreground">No documents uploaded</p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
