@@ -89,7 +89,7 @@ export const EnhancedVerification = () => {
       const { error } = await supabase
         .from('reports')
         .update({
-          status: status === 'approved' ? 'Approved' : 'Rejected',
+          status: status === 'approved' ? 'Verified' : 'Rejected',
           verification_status: status,
           actual_credits: creditsToIssue,
           verification_notes: verificationComment,
