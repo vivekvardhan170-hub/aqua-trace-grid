@@ -293,14 +293,3 @@ export const NGODashboard = () => {
     </div>
   );
 };
-              <p className="text-muted-foreground mb-4">
-                Buy, sell, and trade verified carbon credits with other organizations
-              </p>
-              <Button variant="outline">Join Waitlist</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
