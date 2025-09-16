@@ -14,41 +14,26 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ChevronLeft, 
   ChevronRight, 
-  MapPin, 
   Upload, 
   CheckCircle,
-  Calendar,
   Leaf,
   Camera,
-  Satellite,
-  FileText,
-  AlertCircle
+  FileText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@clerk/clerk-react";
 
-const projectInfoSchema = z.object({
+const reportSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  projectName: z.string().min(1, "Project name is required"),
-  communityName: z.string().min(1, "Community name is required"),
   activityType: z.string().min(1, "Activity type is required"),
-});
-
-const locationSchema = z.object({
   areaCovered: z.coerce.number().min(0.1, "Area must be greater than 0"),
   locationCoordinates: z.string().min(1, "Location coordinates are required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  gpsData: z.string().optional(),
-});
-
-const mediaSchema = z.object({
   estimatedCredits: z.number().min(1, "Estimated credits must be at least 1"),
 });
 
-type ProjectInfoData = z.infer<typeof projectInfoSchema>;
-type LocationData = z.infer<typeof locationSchema>;
-type MediaData = z.infer<typeof mediaSchema>;
+type ReportFormData = z.infer<typeof reportSchema>;
 
 interface ProofFile {
   file: File;
@@ -59,10 +44,8 @@ interface ProofFile {
 }
 
 const steps = [
-  { id: 1, name: "Project Information", icon: FileText },
-  { id: 2, name: "Location & Area", icon: MapPin },
-  { id: 3, name: "Media Upload", icon: Camera },
-  { id: 4, name: "Review & Submit", icon: CheckCircle },
+  { id: 1, name: "Basic Information", icon: FileText },
+  { id: 2, name: "Upload & Submit", icon: Upload },
 ];
 
 export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
@@ -73,55 +56,27 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [proofFiles, setProofFiles] = useState<ProofFile[]>([]);
 
-  // Form instances for each step
-  const projectForm = useForm<ProjectInfoData>({
-    resolver: zodResolver(projectInfoSchema),
-    defaultValues: { title: "", projectName: "", communityName: "", activityType: "" },
-  });
-
-  const locationForm = useForm<LocationData>({
-    resolver: zodResolver(locationSchema),
+  // Single form for simplified submission
+  const form = useForm<ReportFormData>({
+    resolver: zodResolver(reportSchema),
     defaultValues: { 
+      title: "", 
+      activityType: "", 
       areaCovered: undefined, 
       locationCoordinates: "", 
       description: "", 
-      gpsData: "" 
+      estimatedCredits: 0 
     },
-    mode: "onBlur",
-  });
-
-  const mediaForm = useForm<MediaData>({
-    resolver: zodResolver(mediaSchema),
-    defaultValues: { estimatedCredits: 0 },
   });
 
   const getCurrentProgress = () => (currentStep / steps.length) * 100;
 
   const handleNext = async () => {
-    let isValid = false;
-    
-    switch (currentStep) {
-      case 1:
-        isValid = await projectForm.trigger();
-        break;
-      case 2:
-        isValid = await locationForm.trigger();
-        break;
-      case 3:
-        isValid = await mediaForm.trigger();
-        if (isValid && proofFiles.length === 0) {
-          toast({
-            title: "Media Required",
-            description: "Please upload at least one photo, GPS file, or drone report.",
-            variant: "destructive",
-          });
-          return;
-        }
-        break;
-    }
-
-    if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+    if (currentStep === 1) {
+      const isValid = await form.trigger();
+      if (isValid) {
+        setCurrentStep(2);
+      }
     }
   };
 
@@ -196,12 +151,19 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       return;
     }
 
+    if (proofFiles.length === 0) {
+      toast({
+        title: "Photos Required",
+        description: "Please upload at least one photo before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      const projectData = projectForm.getValues();
-      const locationData = locationForm.getValues();
-      const mediaData = mediaForm.getValues();
+      const formData = form.getValues();
 
       // Upload files to storage
       const uploadedFiles = await uploadFilesToStorage();
@@ -221,18 +183,16 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       const { data, error } = await supabase.functions.invoke('submit-report', {
         body: {
           user_id: user.id,
-          title: projectData.title,
-          project_name: projectData.projectName,
-          community_name: projectData.communityName,
-          activity_type: projectData.activityType,
-          area_covered: locationData.areaCovered,
-          location_coordinates: locationData.locationCoordinates,
-          estimated_credits: mediaData.estimatedCredits,
-          description: locationData.description,
+          title: formData.title,
+          project_name: `${formData.activityType} Project`,
+          community_name: user.fullName || "Community Organization",
+          activity_type: formData.activityType,
+          area_covered: formData.areaCovered,
+          location_coordinates: formData.locationCoordinates,
+          estimated_credits: formData.estimatedCredits,
+          description: formData.description,
           proof_documents: proofDocuments,
-          gps_data: locationData.gpsData && locationData.gpsData.trim()
-            ? (() => { try { return JSON.parse(locationData.gpsData); } catch { return { raw: locationData.gpsData }; } })()
-            : null,
+          gps_data: null,
           status: 'Pending',
           verification_status: 'pending',
         },
@@ -242,19 +202,13 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         throw new Error(typeof error === 'string' ? error : (error as any)?.message ?? 'Failed to submit');
       }
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
       toast({
         title: "Report Submitted Successfully",
-        description: "Your restoration activity report has been submitted for verification.",
+        description: "Your restoration activity report has been submitted to NCCR for verification.",
       });
 
       // Reset forms and state
-      projectForm.reset();
-      locationForm.reset();
-      mediaForm.reset();
+      form.reset();
       setProofFiles([]);
       setUploadProgress(0);
       setCurrentStep(1);
@@ -276,10 +230,6 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     switch (type) {
       case 'photo':
         return <Camera className="h-4 w-4" />;
-      case 'gps':
-        return <MapPin className="h-4 w-4" />;
-      case 'drone':
-        return <Satellite className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -292,20 +242,20 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           <div className="space-y-6">
             <div className="text-center">
               <FileText className="h-12 w-12 mx-auto text-blue-600 mb-4" />
-              <h3 className="text-lg font-semibold">Project Information</h3>
-              <p className="text-muted-foreground">Tell us about your restoration project</p>
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              <p className="text-muted-foreground">Provide essential details about your restoration activity</p>
             </div>
             
-            <Form {...projectForm}>
+            <Form {...form}>
               <div className="space-y-4">
                 <FormField
-                  control={projectForm.control}
+                  control={form.control}
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Report Title</FormLabel>
+                      <FormLabel>Activity Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter a descriptive title for this report" {...field} />
+                        <Input placeholder="e.g., Mangrove Restoration at Site A" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -313,35 +263,7 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                 />
 
                 <FormField
-                  control={projectForm.control}
-                  name="projectName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Sundarbans Mangrove Restoration" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={projectForm.control}
-                  name="communityName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Community/Organization Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Gosaba Village Committee" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={projectForm.control}
+                  control={form.control}
                   name="activityType"
                   render={({ field }) => (
                     <FormItem>
@@ -349,14 +271,91 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select the type of restoration activity" />
+                            <SelectValue placeholder="Select activity type" />
                           </SelectTrigger>
                         </FormControl>
-        <SelectContent>
-          <SelectItem value="Mangrove Plantation">Mangrove Plantation</SelectItem>
-          <SelectItem value="Wetland Restoration">Wetland Restoration</SelectItem>
-        </SelectContent>
+                        <SelectContent>
+                          <SelectItem value="Mangrove Plantation">Mangrove Plantation</SelectItem>
+                          <SelectItem value="Wetland Restoration">Wetland Restoration</SelectItem>
+                        </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="locationCoordinates"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location Coordinates</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 22.1696, 88.8817" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="areaCovered"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Area (hectares)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.1"
+                          min="0.1"
+                          placeholder="2.5" 
+                          value={field.value || ""}
+                          onChange={e => {
+                            const value = e.target.value;
+                            field.onChange(value === "" ? undefined : parseFloat(value));
+                          }}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Brief description of the restoration work done..."
+                          className="min-h-[80px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="estimatedCredits"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Carbon Credits (tonnes)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="10" 
+                          {...field}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -370,268 +369,67 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <MapPin className="h-12 w-12 mx-auto text-green-600 mb-4" />
-              <h3 className="text-lg font-semibold">Location & Area Details</h3>
-              <p className="text-muted-foreground">Provide location and area information</p>
+              <Upload className="h-12 w-12 mx-auto text-green-600 mb-4" />
+              <h3 className="text-lg font-semibold">Upload Photos & Submit</h3>
+              <p className="text-muted-foreground">Add proof photos and submit for NCCR verification</p>
             </div>
-            
-            <Form {...locationForm}>
-              <div className="space-y-4">
-                <FormField
-                  control={locationForm.control}
-                  name="locationCoordinates"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>GPS Coordinates</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., 22.1696°N, 88.8817°E or 22.1696, 88.8817" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Enter coordinates in decimal degrees or degrees format
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={locationForm.control}
-                  name="areaCovered"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Area Covered (hectares)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.1"
-                          min="0.1"
-                          placeholder="e.g., 2.5" 
-                          value={field.value || ""}
-                          onChange={e => {
-                            const value = e.target.value;
-                            field.onChange(value === "" ? undefined : parseFloat(value));
-                          }}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Enter the total area of restoration work in hectares
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={locationForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Activity Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Describe the restoration activities, methods used, timeline, and current status..."
-                          className="min-h-[120px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={locationForm.control}
-                  name="gpsData"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Additional GPS Data (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder='{"waypoints": [{"lat": 22.1696, "lng": 88.8817}], "boundaries": []} or any GPS coordinates/tracking data'
-                          className="min-h-[80px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        You can paste GPS coordinates, waypoints, or tracking data in any format
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </Form>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <Camera className="h-12 w-12 mx-auto text-orange-600 mb-4" />
-              <h3 className="text-lg font-semibold">Media Upload</h3>
-              <p className="text-muted-foreground">Upload proof documents and estimate carbon credits</p>
-            </div>
-
-            <Form {...mediaForm}>
-              <FormField
-                control={mediaForm.control}
-                name="estimatedCredits"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estimated Carbon Credits (tonnes CO₂)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="Enter estimated carbon credits" 
-                        {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </Form>
 
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                <h4 className="font-semibold">Upload Supporting Documents</h4>
-                <AlertCircle className="h-4 w-4 text-amber-500" />
+              <div>
+                <Label>Upload Photos</Label>
+                <Input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={(e) => handleFileUpload(e.target.files, 'photo')}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload photos showing your restoration work (required)
+                </p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="photos">Geotagged Photos</Label>
-                  <Input
-                    id="photos"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => handleFileUpload(e.target.files, 'photo')}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Photos with GPS data preferred
-                  </p>
-                </div>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="gps">GPS Tracking Files</Label>
-                  <Input
-                    id="gps"
-                    type="file"
-                    multiple
-                    accept=".gpx,.kml,.json"
-                    onChange={(e) => handleFileUpload(e.target.files, 'gps')}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    GPX, KML, or JSON format
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="drone">Drone/Survey Reports</Label>
-                  <Input
-                    id="drone"
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.jpg,.png"
-                    onChange={(e) => handleFileUpload(e.target.files, 'drone')}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Aerial surveys and reports
-                  </p>
-                </div>
-              </div>
-
-              {proofFiles.length > 0 && (
-                <div className="space-y-2">
-                  <h5 className="font-medium">Uploaded Files ({proofFiles.length})</h5>
-                  <div className="space-y-1">
-                    {proofFiles.map((proofFile) => (
-                      <div key={proofFile.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                        <div className="flex items-center gap-3">
-                          {getFileIcon(proofFile.type)}
-                          <div>
-                            <span className="text-sm font-medium">{proofFile.file.name}</span>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>({(proofFile.file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                              {proofFile.geotagged && (
-                                <Badge variant="secondary" className="text-xs">Geotagged</Badge>
-                              )}
-                            </div>
-                          </div>
+            {/* Display uploaded files */}
+            {proofFiles.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Uploaded Photos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {proofFiles.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 border rounded">
+                        <div className="flex items-center gap-2">
+                          {getFileIcon(file.type)}
+                          <p className="text-sm font-medium">{file.file.name}</p>
                         </div>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeFile(proofFile.id)}
+                          onClick={() => removeFile(file.id)}
+                          className="text-red-600 hover:text-red-700"
                         >
                           Remove
                         </Button>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      case 4:
-        const projectData = projectForm.getValues();
-        const locationData = locationForm.getValues();
-        const mediaData = mediaForm.getValues();
-
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-4" />
-              <h3 className="text-lg font-semibold">Review & Submit</h3>
-              <p className="text-muted-foreground">Review your submission before sending</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Project Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div><strong>Title:</strong> {projectData.title}</div>
-                  <div><strong>Project:</strong> {projectData.projectName}</div>
-                  <div><strong>Community:</strong> {projectData.communityName}</div>
-                  <div><strong>Activity:</strong> {projectData.activityType}</div>
                 </CardContent>
               </Card>
+            )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Location & Impact</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div><strong>Coordinates:</strong> {locationData.locationCoordinates}</div>
-                  <div><strong>Area:</strong> {locationData.areaCovered} hectares</div>
-                  <div><strong>Est. Credits:</strong> {mediaData.estimatedCredits} tonnes CO₂</div>
-                  <div><strong>Files:</strong> {proofFiles.length} documents</div>
+            {proofFiles.length === 0 && (
+              <Card className="border-2 border-dashed border-muted-foreground/25">
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <Camera className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-center">
+                    Please upload at least one photo to document your restoration work
+                  </p>
                 </CardContent>
               </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{locationData.description}</p>
-              </CardContent>
-            </Card>
+            )}
 
             {isSubmitting && uploadProgress > 0 && (
               <div className="space-y-2">
@@ -702,10 +500,10 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           ) : (
             <Button 
               onClick={handleSubmit} 
-              disabled={isSubmitting}
+              disabled={isSubmitting || proofFiles.length === 0}
               className="gap-2"
             >
-              {isSubmitting ? "Submitting..." : "Submit Report"}
+              {isSubmitting ? "Submitting..." : "Submit to NCCR"}
               <CheckCircle className="h-4 w-4" />
             </Button>
           )}
