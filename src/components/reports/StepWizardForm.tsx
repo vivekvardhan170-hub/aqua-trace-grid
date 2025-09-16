@@ -225,7 +225,14 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           estimated_credits: mediaData.estimatedCredits,
           description: locationData.description,
           proof_documents: proofDocuments,
-          gps_data: locationData.gpsData ? JSON.parse(locationData.gpsData) : null,
+          gps_data: locationData.gpsData && locationData.gpsData.trim() ? 
+            (() => {
+              try {
+                return JSON.parse(locationData.gpsData);
+              } catch (e) {
+                return { raw: locationData.gpsData };
+              }
+            })() : null,
           status: 'Pending',
         });
 
@@ -428,10 +435,14 @@ export const StepWizardForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                       <FormLabel>Additional GPS Data (Optional)</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder='{"waypoints": [{"lat": 22.1696, "lng": 88.8817}], "boundaries": []}'
+                          placeholder='{"waypoints": [{"lat": 22.1696, "lng": 88.8817}], "boundaries": []} or any GPS coordinates/tracking data'
+                          className="min-h-[80px]"
                           {...field}
                         />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        You can paste GPS coordinates, waypoints, or tracking data in any format
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
